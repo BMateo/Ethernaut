@@ -675,9 +675,7 @@ Balance del contrato del token2:  90
       "0xcaD9deF597a1dD250655954e127C3C600044Af97"
     );
 
-    await CryptoVault.sweepToken(LegacyToken.address);
-
-    console.log(await LegacyToken.balanceOf(CryptoVault.address));
-    console.log(await DoubleEntryPointToken.balanceOf(CryptoVault.address));
+    let tx = await CryptoVault.sweepToken(LegacyToken.address);
+    console.log(tx);
   });
 });

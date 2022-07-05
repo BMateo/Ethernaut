@@ -3,6 +3,7 @@ pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "hardhat/console.sol";
 
 interface DelegateERC20 {
   function delegateTransfer(address to, uint256 value, address origSender) external returns (bool);
@@ -133,3 +134,31 @@ contract DoubleEntryPoint is ERC20("DoubleEntryPointToken", "DET"), DelegateERC2
         return true;
     }
 }
+
+contract Bot {
+    Forta public fortaContract;
+    constructor (address _fortaContract) public {
+        fortaContract = Forta(_fortaContract);
+    }    
+/*calldata offset	length	element                              	type    example value
+      0x00	          4	    function signature (handleTransaction)	bytes4	0x220ab6aa
+      0x04	          32	user	                                address	0x000000000000000000000000XxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx
+      0x24	          32	offset of msgData	                    uint256	0x0000000000000000000000000000000000000000000000000000000000000040
+      0x44	          32	length of msgData	                    uint256	0x0000000000000000000000000000000000000000000000000000000000000064
+      0x64	          4	    function signature (delegateTransfer)	bytes4	0x9cd1a121
+      0x68	          32	to	                                    address	0x000000000000000000000000XxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx
+      0x88	          32	value	                                uint256	0x0000000000000000000000000000000000000000000000056bc75e2d63100000
+      0xA8	          32	origSender	                            address	0x000000000000000000000000XxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx
+      0xC8	          28	padding	                                bytes	0x00000000000000000000000000000000000000000000000000000000 */
+    function handleTransaction(address user, bytes calldata data) external {
+        address origSender;
+        //get the origSender parameter from the 
+        assembly {
+            origSender := calldataload(0xa8)
+        }
+        // if the sender is the vault address, we raise an alert
+        if(origSender == 0xcaD9deF597a1dD250655954e127C3C600044Af97){
+            fortaContract.raiseAlert(user);
+        }
+    }
+}    
